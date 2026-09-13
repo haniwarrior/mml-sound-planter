@@ -1,0 +1,20 @@
+{
+  "name": "mml-sound-planter",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build && node scripts/build-hosting.mjs",
+    "preview": "vite preview",
+    "test": "node --experimental-strip-types --test tests/*.test.ts"
+  },
+  "devDependencies": {
+    "@openai/sites-vite-plugin": "^0.2.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}
