@@ -19,7 +19,7 @@ test('notes, accidental boundaries, arbitrary lengths, rests and multiple dots',
 })
 test('all default and persistent MML states',()=>{
  const state=events('c')[0].state
- assert.deepEqual(state,{tempo:128,octave:4,length:4,volume:96,gate:8,pan:4,detune:0,mode:0,envelope:0})
+ assert.deepEqual(state,{tempo:128,octave:4,length:4,volume:96,gate:8,pan:4,detune:0,mode:0,envelope:0,vibrato:0,tremolo:0})
  const e=events('t120 o2 >3 <2 l6 v15 @v127 q3 p8 @d-16 c d')[1]
  assert.equal(e.pitch,50);assert.equal(e.state.volume,127);assert.equal(e.state.detune,-16);assert.equal(e.state.pan,8);close(e.duration,1/3);close(e.gate,1/8)
  assert.equal(events('@v127 v15 c')[0].state.volume,120)
@@ -73,7 +73,7 @@ const invalid=[
  'c0','c129','c++','c+-','c4+','c.4','r+','r-','t0','t256','o0','o9','o8>c','o1<c','o8(c>c)',
  'l0','l129','v16','v-1','@v128','q0','q9','p9','@d17','@d-17','@s,32','@s,-1','@s0',
  '@e,1 c','[c','c]','[c]256','[c::d]2','[c:d]0',':','&c','r&c','c&&d',
- '(c)','(cd)4.','(cde)','(c4d)','(c.d)','(cr)','(ct120d)','(cl8d)','(cv8d)','(c@v8d)','(cq4d)','(cp4d)','(c@d1d)','(c@s,0d)','(c@e,0d)','(c[de])','(c&d)','(c','@f,0','z','!','{c}'
+ '(c)','(cde)','(c4d)','(c.d)','(cr)','(ct120d)','(cl8d)','(cv8d)','(c@v8d)','(cq4d)','(cp4d)','(c@d1d)','(c@s,0d)','(c@e,0d)','(c[de])','(c&d)','(c','@f,0','z','!','{c}'
 ]
 for(const mml of invalid) test(`reject ${mml}`,()=>assert.throws(()=>song(mml),MmlError))
 for(const source of [

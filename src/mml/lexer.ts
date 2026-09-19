@@ -10,7 +10,12 @@ export function lex(source: string): Token[] {
     if (source.slice(offset, offset + 2) === '//') { while (offset < source.length && source[offset] !== '\n') advance(); continue }
     const pos = { offset, line, column }
     let text = advance().toLowerCase()
-    if (/\d/.test(text)) { while (/\d/.test(source[offset] ?? '')) text += advance() }
+    if (text === '$') {
+      while (offset < source.length && source[offset] !== '$' && source[offset] !== '\n') text += advance().toLowerCase()
+      if (source[offset] !== '$') throw new MmlError('invalid macro name: $で閉じてください', pos)
+      text += advance()
+      if (!/^\$[a-z0-9_+\-]{1,16}\$$/.test(text)) throw new MmlError('invalid macro name: 1～16文字の英数字・_・+・-で指定してください', pos)
+    } else if (/\d/.test(text)) { while (/\d/.test(source[offset] ?? '')) text += advance() }
     else if (text === 't' && source.slice(offset, offset + 4).toLowerCase() === 'rack') { for (let i = 0; i < 4; i++) text += advance().toLowerCase() }
     else if (!/[a-z@{},.\[\]:&()+<>-]/.test(text)) throw new MmlError(`未知の文字「${text}」`, pos)
     tokens.push({ text, pos })

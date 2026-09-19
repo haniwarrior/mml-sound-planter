@@ -4,12 +4,16 @@ export class MmlError extends Error {
   constructor(message: string, position: Position) { super(message); this.name = 'MmlError'; this.position = position }
 }
 export type Envelope = [number, number, number, number, number, number]
-export type Command = 't' | 'o' | '>' | '<' | 'l' | 'v' | '@v' | 'q' | 'p' | '@d' | '@s' | '@e'
+export type Command = 't' | 'o' | '>' | '<' | 'l' | 'v' | '@v' | 'q' | 'p' | '@d' | '@s' | '@e' | '@lv' | '@lt'
 export interface Pitch { kind: 'pitch'; note: number; pos: Position }
 export interface SetNode { kind: 'set'; command: Command; value: number; pos: Position }
+export interface Lfo { depth: number; period: number; delay: number; direction: '+' | '-'; mode: 'r' | 'h' }
+export type Macros = Record<string, { body: Node[]; pos: Position }>
+export type Lfos = Record<'@lv' | '@lt', Record<number, Lfo>>
 export type Node = SetNode
+  | { kind: 'macro'; name: string; pos: Position }
   | { kind: 'note'; note: number | null; length?: number; dots: number; pos: Position }
   | { kind: 'portamento'; pitches: (Pitch | SetNode)[]; length?: number; dots: number; pos: Position }
   | { kind: 'loop'; body: Node[]; count: number; pos: Position }
   | { kind: 'break' | 'tie'; pos: Position }
-export interface Song { envelopes: Record<number, Envelope>; tracks: Record<number, Node[]> }
+export interface Song { macros: Macros; lfos: Lfos; envelopes: Record<number, Envelope>; tracks: Record<number, Node[]> }

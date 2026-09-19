@@ -8,8 +8,32 @@ export function validate(song: Song): void {
   const memo = new WeakMap<Node[], Map<string, Result>>()
   const inspect = (nodes: Node[]) => { for (const n of nodes) {
     if (n.kind === 'set' && n.command === '@e' && n.value !== 0 && !song.envelopes[n.value]) throw new MmlError(`エンベロープ${n.value}は未定義です`,n.pos)
+    if (n.kind === 'set' && (n.command === '@lv' || n.command === '@lt') && n.value !== 0 && !song.lfos[n.command][n.value]) throw new MmlError(`undefined LFO: ${n.command},${n.value}`,n.pos)
+    if (n.kind === 'macro' && !song.macros[n.name]) throw new MmlError(`undefined macro: $${n.name}$`,n.pos)
     if (n.kind === 'loop') inspect(n.body)
   } }
+  // Validate the entire definition graph, including unused definitions, before execution.
+  const visiting = new Set<string>(), depths = new Map<string,number>()
+  const visit = (name: string, depth = 0): number => {
+    const definition=song.macros[name]
+    if (visiting.has(name)) throw new MmlError(`macro circular reference: $${name}$`,definition.pos)
+    if (depth > 128) throw new MmlError('マクロの入れ子は128段までです',definition.pos)
+    const cached=depths.get(name);if(cached !== undefined) return cached
+    visiting.add(name);let height=1
+    const refs=(nodes:Node[], nesting=0) => { for(const n of nodes) {
+      if(n.kind === 'macro') height=Math.max(height,nesting+1+visit(n.name,depth+1))
+      if(n.kind === 'loop') {height=Math.max(height,nesting+2);refs(n.body,nesting+1)}
+    } }
+    refs(definition.body);visiting.delete(name)
+    if(height>128) throw new MmlError('マクロの入れ子は128段までです',definition.pos)
+    depths.set(name,height);return height
+  }
+  for(const definition of Object.values(song.macros)) inspect(definition.body)
+  for(const name of Object.keys(song.macros)) visit(name)
+  const checkDepth=(nodes:Node[], nesting=0) => {for(const n of nodes) {
+    if(n.kind === 'macro' && nesting+depths.get(n.name)!>128) throw new MmlError('マクロとループの入れ子は128段までです',n.pos)
+    if(n.kind === 'loop') checkDepth(n.body,nesting+1)
+  }}
   const run = (nodes: Node[], input: State, last = false): Result => {
     const key = JSON.stringify([input,last]); let cache = memo.get(nodes)
     if (!cache) { cache = new Map(); memo.set(nodes,cache) }
@@ -29,7 +53,10 @@ export function validate(song: Song): void {
     }
     for (const n of nodes) {
       if (n.kind === 'break' && last) break
-      if (n.kind === 'loop') {
+      if (n.kind === 'macro') {
+        merge({state,timed:false,forever:false,head:1,tail:1,max:1})
+        merge(run(song.macros[n.name].body,state))
+      } else if (n.kind === 'loop') {
         const seen = new Map<string, { iteration: number; timed: boolean }>()
         let iteration = 0
         while (n.count === 0 || iteration < n.count) {
@@ -66,5 +93,5 @@ export function validate(song: Song): void {
     }
     const result = { state, timed, forever, head, tail, max }; cache.set(key,result); return result
   }
-  for (const nodes of Object.values(song.tracks)) { inspect(nodes); run(nodes,{octave:4,mode:false,previous:'none'}) }
+  for (const nodes of Object.values(song.tracks)) { inspect(nodes); checkDepth(nodes); run(nodes,{octave:4,mode:false,previous:'none'}) }
 }

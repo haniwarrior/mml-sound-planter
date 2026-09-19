@@ -1,15 +1,22 @@
-import type { Command, Node, Position } from './ast.ts'
-export interface MmlState { tempo: number; octave: number; length: number; volume: number; gate: number; pan: number; detune: number; mode: number; envelope: number }
-export const initialState = (): MmlState => ({tempo:128,octave:4,length:4,volume:96,gate:8,pan:4,detune:0,mode:0,envelope:0})
+import { MmlError, type Macros, type Command, type Node, type Position } from './ast.ts'
+export interface MmlState { tempo: number; octave: number; length: number; volume: number; gate: number; pan: number; detune: number; mode: number; envelope: number; vibrato: number; tremolo: number }
+export const initialState = (): MmlState => ({tempo:128,octave:4,length:4,volume:96,gate:8,pan:4,detune:0,mode:0,envelope:0,vibrato:0,tremolo:0})
 export interface TimedEvent {
   time: number; duration: number; gate: number; pitch: number | null; endPitch: number | null
   connected: boolean; continues: boolean; state: MmlState; pos: Position
 }
-function* walk(nodes: Node[], last = false): Generator<Exclude<Node,{kind:'loop'}>> {
+function* walk(nodes: Node[], macros: Macros, last = false, active: string[] = [], budget = {steps:0}, depth = 0): Generator<Node> {
+  const step = (n:Node) => { if (++budget.steps > 16384 || depth > 128) throw new MmlError('展開処理の安全上限を超えました',n.pos) }
   for (const n of nodes) {
+    if (n.kind === 'break' && last) return
+    if (n.kind !== 'loop') step(n)
     if (n.kind === 'break') { if (last) return; continue }
-    if (n.kind === 'loop') { for (let i = 0; n.count === 0 || i < n.count; i++) yield* walk(n.body,n.count !== 0 && i === n.count-1) }
-    else yield n
+    if (n.kind === 'loop') { for (let i = 0; n.count === 0 || i < n.count; i++) {step(n);yield* walk(n.body,macros,n.count !== 0 && i === n.count-1,active,budget,depth+1)} }
+    else if (n.kind === 'macro') {
+      if (!macros[n.name]) throw new MmlError(`undefined macro: $${n.name}$`,n.pos)
+      if (active.includes(n.name)) throw new MmlError(`macro circular reference: $${n.name}$`,n.pos)
+      yield* walk(macros[n.name].body,macros,false,[...active,n.name],budget,depth+1)
+    } else { if(n.kind === 'note' || n.kind === 'portamento') budget.steps=0;yield n }
   }
 }
 export function apply(state: MmlState, command: Command, value: number) {
@@ -19,6 +26,7 @@ export function apply(state: MmlState, command: Command, value: number) {
     case 'l': state.length=value; break; case 'v': state.volume=value*8; break
     case '@v': state.volume=value; break; case 'q': state.gate=value; break
     case 'p': state.pan=value; break; case '@d': state.detune=value; break
+    case '@lv': state.vibrato=value; break; case '@lt': state.tremolo=value; break
     case '@s': state.mode=value; break; case '@e': state.envelope=value; break
   }
 }
@@ -26,7 +34,7 @@ export function apply(state: MmlState, command: Command, value: number) {
 export class Sequencer {
   state = initialState(); time = 0
   private iterator: ReturnType<typeof walk>; private pending?: TimedEvent; private ended = false
-  constructor(nodes: Node[]) { this.iterator=walk(nodes) }
+  constructor(nodes: Node[], macros: Macros = {}) { this.iterator=walk(nodes,macros) }
   private read(): { event?: TimedEvent; tie: boolean } {
     let tie = false
     while (true) {
