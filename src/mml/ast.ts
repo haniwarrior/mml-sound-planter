@@ -7,7 +7,7 @@ export type Envelope = [number, number, number, number, number, number]
 export type Command = 't' | 'o' | '>' | '<' | 'l' | 'v' | '@v' | 'q' | 'p' | '@d' | '@s' | '@e' | '@lv' | '@lt'
 export interface Pitch { kind: 'pitch'; note: number; pos: Position }
 export interface SetNode { kind: 'set'; command: Command; value: number; pos: Position }
-export interface Lfo { depth: number; period: number; delay: number; direction: '+' | '-'; mode: 'r' | 'h' }
+export interface Lfo { depth: number; period: number; delay: number; mode: 0 | 1 }
 export type Macros = Record<string, { body: Node[]; pos: Position }>
 export type Lfos = Record<'@lv' | '@lt', Record<number, Lfo>>
 export type Node = SetNode

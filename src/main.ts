@@ -6,18 +6,18 @@ import { MmlError } from './mml/ast.ts'
 
 const demo = `// 小さな音から、はじめよう。
 track0 {
-    @e,1 {31,12,4,8,10,2}
-    @e,2 {31,18,8,12,8,0}
+    @e1 {31,12,4,8,10,2}
+    @e2 {31,18,8,12,8,0}
 }
 
 track1 {
-    @s,0 @e,1 t128 o5 l8 q6 v12 p3
+    @s0 @e1 t128 o5 l8 q6 v12 p3
     [c e g >c< : g e]2
     (ce)4&(eg)4 g4 r4
 }
 
 track2 {
-    @s,0 @e,2 t128 o3 l4 q5 v9 p5
+    @s0 @e2 t128 o3 l4 q5 v9 p5
     [c g]3 c2 r2
 }`
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
@@ -26,7 +26,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 <section class="workspace" aria-label="MMLサウンドエディタ"><div class="editor-heading"><div><span class="index">01</span><label for="source">メインMML</label><span class="sub">YOUR COMPOSITION</span></div><div class="files"><button id="load">↥ 読み込み</button><button id="save">↧ 保存</button></div></div>
 <div class="source-wrap"><textarea id="source" spellcheck="false" autocomplete="off" autocapitalize="off" aria-describedby="source-hint"></textarea></div>
 <div class="transport"><div class="transport-buttons"><button class="primary" id="play">▶ <span>再生</span></button><button id="stop">■ <span>停止</span></button></div><span id="source-hint">プレーンテキスト / 最大11トラック</span></div></section>
-<section class="test-workspace"><div class="editor-heading"><div><span class="index">02</span><label for="test">テストMML</label><span class="sub">A SPACE TO EXPERIMENT</span></div><button id="test-play">▷ テスト再生</button></div><textarea id="test" rows="3" spellcheck="false" autocomplete="off" autocapitalize="off">@s,0 @e,1 o5 l8 c e g >c</textarea><div class="test-hint">短いフレーズを気軽に試奏。track0の定義を使えます。<span>保存には含まれません</span></div></section>
+<section class="test-workspace"><div class="editor-heading"><div><span class="index">02</span><label for="test">テストMML</label><span class="sub">A SPACE TO EXPERIMENT</span></div><button id="test-play">▷ テスト再生</button></div><textarea id="test" rows="3" spellcheck="false" autocomplete="off" autocapitalize="off">@s0 @e1 o5 l8 c e g >c</textarea><div class="test-hint">短いフレーズを気軽に試奏。track0の定義を使えます。<span>保存には含まれません</span></div></section>
 <div id="status" role="status" aria-live="polite"><span class="status-led"></span><span id="status-text">準備完了。再生してみましょう。</span></div>
 <footer><span>気軽にMMLで楽しむ。</span><span>TEXT IN. SOUND OUT.</span></footer></main><input id="file" type="file" accept="text/plain,.txt,.mml" hidden>`
 const source=document.querySelector<HTMLTextAreaElement>('#source')!

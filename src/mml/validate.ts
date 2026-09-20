@@ -8,7 +8,7 @@ export function validate(song: Song): void {
   const memo = new WeakMap<Node[], Map<string, Result>>()
   const inspect = (nodes: Node[]) => { for (const n of nodes) {
     if (n.kind === 'set' && n.command === '@e' && n.value !== 0 && !song.envelopes[n.value]) throw new MmlError(`エンベロープ${n.value}は未定義です`,n.pos)
-    if (n.kind === 'set' && (n.command === '@lv' || n.command === '@lt') && n.value !== 0 && !song.lfos[n.command][n.value]) throw new MmlError(`undefined LFO: ${n.command},${n.value}`,n.pos)
+    if (n.kind === 'set' && (n.command === '@lv' || n.command === '@lt') && n.value !== 0 && !song.lfos[n.command][n.value]) throw new MmlError(`undefined LFO: ${n.command}${n.value}`,n.pos)
     if (n.kind === 'macro' && !song.macros[n.name]) throw new MmlError(`undefined macro: $${n.name}$`,n.pos)
     if (n.kind === 'loop') inspect(n.body)
   } }
@@ -83,7 +83,7 @@ export function validate(song: Song): void {
         }
         if (n.kind === 'note' || n.kind === 'portamento') {
           const isRest = n.kind === 'note' && n.note === null
-          if (!isRest && !state.mode) throw new MmlError('発音前に@s,Nを指定してください',n.pos)
+          if (!isRest && !state.mode) throw new MmlError('発音前に@sNを指定してください',n.pos)
           if (n.kind === 'portamento') for (const p of n.pitches) if (p.kind === 'set') octave(p)
           state.previous = isRest ? 'rest' : 'note'; timed = true; tail = 0
         }

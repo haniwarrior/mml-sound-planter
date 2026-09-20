@@ -7,7 +7,7 @@ const code=await readFile(`dist/client/assets/${assets.find(n=>n.startsWith('wor
 let Processor
 class Base {port={onmessage:null,postMessage:()=>{}}}
 runInNewContext(code,{AudioWorkletProcessor:Base,sampleRate:48000,registerProcessor:(_name,type)=>{Processor=type}})
-const processor=new Processor({processorOptions:{song:compile('track0 {@lv,1 {8,5,0,+,r} @lt,1 {20,8,0,-,h} $phrase$ {(ce)4.&d}} track1 {@s,105 @lv,1 @lt,1 $phrase$}')}})
+const processor=new Processor({processorOptions:{song:compile('track0 {@lv1 {8,5,0,0} @lt1 {-20,8,0,1} $phrase$ {(ce)4.&d}} track1 {@s105 @lv1 @lt1 $phrase$}')}})
 const output=[[new Float32Array(128),new Float32Array(128)]]
 assert.equal(processor.process([],output),true)
 assert.ok(output[0][0].some(n=>n!==0))

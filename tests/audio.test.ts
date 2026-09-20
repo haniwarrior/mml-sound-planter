@@ -33,31 +33,31 @@ test('LFSR is deterministic binary pseudo-noise and period changes granularity',
  assert.ok(changes>slowChanges*3)
 })
 test('noise ignores note, portamento pitch and detune, including KS',()=>{
- const defs='@e,1 {20,8,3,9,8,3}'
- const a=render(renderer('@s,10 @e,1 o1 @d-16 c',defs),12000)
- const b=render(renderer('@s,10 @e,1 o8 @d16 (cg)',defs),12000)
+ const defs='@e1 {20,8,3,9,8,3}'
+ const a=render(renderer('@s10 @e1 o1 @d-15 c',defs),12000)
+ const b=render(renderer('@s10 @e1 o8 @d15 (cg)',defs),12000)
  assert.deepEqual(a.l,b.l)
 })
 test('tone emits stereo audio, pan endpoints, volume zero and q keyoff',()=>{
- const left=render(renderer('@s,0 t120 p0 q4 c'),sr)
+ const left=render(renderer('@s0 t120 p0 q4 c'),sr)
  assert.ok(power(left.l)>1);assert.ok(power(left.r)<1e-20);assert.equal(power(left.l.slice(sr/4)),0);assert.equal(left.active,false)
- const right=render(renderer('@s,0 p8 c'),1000);assert.ok(power(right.l)<1e-20);assert.ok(power(right.r)>0)
- const zero=render(renderer('@s,0 v0 c'),sr);assert.equal(power(zero.l),0)
+ const right=render(renderer('@s0 p8 c'),1000);assert.ok(power(right.l)<1e-20);assert.ok(power(right.r)>0)
+ const zero=render(renderer('@s0 v0 c'),sr);assert.equal(power(zero.l),0)
 })
 test('tie suppresses gate, rest and track end release correctly',()=>{
- const a=render(renderer('@s,0 t120 q1 c&d'),sr)
+ const a=render(renderer('@s0 t120 q1 c&d'),sr)
  assert.ok(power(a.l.slice(sr/8,sr/2))>1);assert.equal(power(a.l.slice(sr*9/16)),0);assert.equal(a.active,false)
- const rest=render(renderer('@s,0 t120 q1 c&r4 d4'),sr)
+ const rest=render(renderer('@s0 t120 q1 c&r4 d4'),sr)
  assert.ok(power(rest.l.slice(sr/4,sr/2))>1);assert.equal(power(rest.l.slice(sr/2)),0)
- const end=render(renderer('@s,0 t120 q1 c&'),sr);assert.equal(power(end.l.slice(sr/2)),0)
+ const end=render(renderer('@s0 t120 q1 c&'),sr);assert.equal(power(end.l.slice(sr/2)),0)
 })
 test('envelope release runs after gate and completes naturally',()=>{
- const r=renderer('@s,0 @e,1 t120 q4 c','@e,1 {31,0,0,12,0,0}')
+ const r=renderer('@s0 @e1 t120 q4 c','@e1 {31,0,0,12,0,0}')
  const a=render(r,Math.floor(sr*.3));assert.ok(power(a.l.slice(sr/4))>0)
  const b=render(r,sr);assert.equal(b.active,false);assert.equal(power(b.l.slice(sr/2)),0)
 })
 test('render blocks do not alter common clock or oscillator/envelope phase',()=>{
- const text='@s,0 @e,1 t255 l128 [c&d (eg)&(ge) r]0',defs='@e,1 {24,10,3,10,7,2}'
+ const text='@s0 @e1 t255 l128 [c&d (eg)&(ge) r]0',defs='@e1 {24,10,3,10,7,2}'
  const a=render(renderer(text,defs),32768)
  const split=renderer(text,defs),l=new Float32Array(32768),r=new Float32Array(32768)
  for(let i=0;i<32768;i+=128) {const b=render(split,128);l.set(b.l,i);r.set(b.r,i);assert.equal(b.active,true)}

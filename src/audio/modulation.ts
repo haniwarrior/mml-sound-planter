@@ -5,11 +5,11 @@ import type { Lfo } from '../mml/ast.ts'
 export function lfoValue(definition: Lfo | undefined, elapsed: number): number {
   if (!definition || elapsed < definition.delay * 0.1) return 0
   const phase = Math.max(0, (elapsed - definition.delay * 0.1) / (definition.period * 0.1))
-  const wave = definition.mode === 'h' ? Math.sin(Math.min(1,phase)*Math.PI/2) : Math.sin(phase*2*Math.PI)
-  return wave * (definition.direction === '+' ? 1 : -1) * definition.depth / 127
+  const wave = definition.mode === 1 ? Math.sin(Math.min(1,phase)*Math.PI/2) : Math.sin(phase*2*Math.PI)
+  return wave * definition.depth / 127
 }
 export function vibratoOffset(definition: Lfo | undefined, elapsed: number): number {
-  return 24 * lfoValue(definition, elapsed)
+  return 12 * lfoValue(definition, elapsed)
 }
 export function tremoloGain(definition: Lfo | undefined, elapsed: number): number {
   // Unity at delay/start; positive motion rises towards a bounded 2× gain.

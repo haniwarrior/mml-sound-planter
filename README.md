@@ -66,8 +66,8 @@ SequencerはWeb Audio APIを参照せず、音源もMML文字列を読みませ�
 - 大文字小文字、空白、改行、`//`コメント。エラーに元ソースの行・列を表示。
 - c～b / r、シャープ・フラット、1～128の任意整数音長、複数付点。
 - t / o / > / < / l / v / @v / q / p / @d と指定された初期値・値域。
-- @s,0の矩形波、@s,1～31の周期指定疑似ノイズ、@s,101～131のTone + Noise。
-- track0内の@e,N定義、@e,N選択、@e,0無効化、6値の検証、KS。
+- @s0の矩形波、@s1～31の周期指定疑似ノイズ、@s101～131のTone + Noise。
+- track0内の@eN定義、@eN選択、@e0無効化、6値の検証、KS。
 - 有限・無限・入れ子ループ、有限ループの最終周回脱出`:`。
 - 同音タイ・異音レガート、ループ境界を越える接続、休符/末尾でのキーオフ。
 - 2音ポルタメント（複数付点対応）、内部のオクターブ変更保持、qと連続ポルタメント。
@@ -108,24 +108,26 @@ FM追加時はVoiceを追加し、同じSequencerとEnvelopeGeneratorを再利�
 track0 {
     $arp+$ {c8 e8 g8}
     $phrase$ {$arp+$ (ce)4.&(ed)4.}
-    @lv,1 {8,5,2,+,r}
-    @lt,1 {20,8,0,-,r}
+    @lv1 {8,5,2,0}
+    @lt1 {-20,8,0,0}
 }
 track1 {
-    @s,105 @lv,1 @lt,1 t120 o4 v10
-    $phrase$ @lv,0 @lt,0 c4
+    @s105 @lv1 @lt1 t120 o4 v10
+    $phrase$ @lv0 @lt0 c4
 }
 ```
 
 マクロ名は1～16文字の英数字・`_+-`。大文字小文字を区別しません。track0のみで定義し、前方参照・入れ子呼び出しに対応します。状態・`&`は境界を越えて継続し、本文の元の行・列でエラーを表示します。未使用の定義も含め、参照グラフのDFSで未定義・循環参照を再生前に検出します。ASTを遅延走査し、再生側にも循環・深さ・無時間処理数の上限があります。マクロとループを合わせた深さは128段までです。
 
-LFO定義は`@lv,N {Depth,Period,Delay,Direction,Mode}`（Vibrato）または`@lt,N {...}`（Tremolo）。種類ごとに独立した正整数番号を使います。Depthは0～127、Periodは1～255、Delayは0～255、時間単位は0.1秒。Directionは`+`/`-`、Modeは`r`/`h`です。演奏トラックで同コマンドの番号を選択し、0でOFFにします。定義番号0は禁止です。テスト再生もtrack0のマクロ・LFOを利用できます。
+LFO定義は`@lvN {Depth,Period,Delay,Mode}`（Vibrato）または`@ltN {...}`（Tremolo）。種類ごとに独立した正整数番号を使います。Depthは-127～+127、Periodは1～255、Delayは0～255、時間単位は0.1秒。Depthの符号が開始方向を表し、正の`+`は省略可能です。Modeは`0`（repeat）/`1`（hold）です。演奏トラックで同コマンドの番号を選択し、0でOFFにします。定義番号0は禁止です。テスト再生もtrack0のマクロ・LFOを利用できます。
 
 - repeatは指定Periodの正弦波。holdは指定Periodで四分の一正弦波をたどり、符号付き目標値を保持します。
 - 通常のkey-onで位相・Delayをリセットします。`&`接続中は継続し、選択番号が変わったLFOのみ再開始します。
-- `u = Direction × Depth/127 × sine`とし、Vibratoは`24 × u`半音。ノート＋ポルタメント＋detune＋Vibratoを加算した音程から周波数を求めます。
+- `u = Depth/127 × sine`とし、Vibratoは`12 × u`半音（最大±1オクターブ）。ノート＋ポルタメント＋detune＋Vibratoを加算した音程から周波数を求めます。
 - Tremoloは`gain = clamp(volume/127 × envelope × (1+u), 0, 1)`。変調係数は0～2、Delay中は1です。正方向は増幅側から始まり、上限ではclampするため正弦波の山が平らになる場合があります。EGが0なら必ず無音です。
-- `@s,101～131`ではNoise Period=N−100。Tone/Noiseをゲート結合し、NoiseがHighの間はTone、Lowの間はLowを出力します。Tone側のPolyBLEP補正を維持し、波形の単純加算は行いません。独立したTone/NoiseとMixerの構成は[GIデータシート](https://www.silicon-heaven.net/atom/howel/parts/ay3891x_datasheet.htm)を参考にしています。
+- `@s101～131`ではNoise Period=N−100。Tone/Noiseをゲート結合し、NoiseがHighの間はTone、Lowの間はLowを出力します。Tone側のPolyBLEP補正を維持し、波形の単純加算は行いません。独立したTone/NoiseとMixerの構成は[GIデータシート](https://www.silicon-heaven.net/atom/howel/parts/ay3891x_datasheet.htm)を参考にしています。
 - Tone + Noiseのpitch系処理はToneのみ、Noise Periodは固定。Noise onlyではVibratoも無効です。Tremoloは全モードの最終出力へ適用します。
 
 実機のDAC・クロック量子化・共有ノイズ回路の完全再現ではありません。既存設計に合わせて各トラックが独立したLFSRを持ち、ゲート出力を±1へ写像します。Tone側は既存の連続周波数・PolyBLEPを維持し、Noiseエッジの追加の帯域制限やDC除去は行いません。新機能のDSP検証は`tests/extensions.test.ts`、配布Workletでの統合検証は`scripts/check-build.mjs`で実施します。
+
+コマンドと番号の間にカンマは入れません（`@s0`、`@e1`、`@lv1`、`@lt1`）。旧カンマ書式・旧5パラメータLFO・旧Mode `r`/`h`はエラーです。定義内のパラメータ区切りカンマは維持します。`@d`は-15～+15、`@d5`と`@d+5`は同値です。detuneの1単位=1 centは変更しません。

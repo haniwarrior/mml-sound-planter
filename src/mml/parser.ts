@@ -1,4 +1,4 @@
-import { MmlError, type Lfo, type Command, type Envelope, type Node, type Pitch, type SetNode, type Song } from './ast.ts'
+import { MmlError, type Command, type Envelope, type Node, type Pitch, type SetNode, type Song } from './ast.ts'
 import { lex, type Token } from './lexer.ts'
 const notes: Record<string, number> = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 }
 class Parser {
@@ -14,6 +14,14 @@ class Parser {
     if (!Number.isSafeInteger(n) || n < min || n > max) throw new MmlError(`値は${min}～${max}で指定してください`, token.pos)
     return n
   }
+  signedNumber(max: number): number {
+    const pos=this.token.pos
+    let sign=1
+    if (this.text === '+' || this.text === '-') { sign=this.text === '-' ? -1 : 1;this.i++ }
+    const value=sign*this.number(0,Number.MAX_SAFE_INTEGER)
+    if (value < -max || value > max) throw new MmlError(`値は-${max}～+${max}で指定してください`,pos)
+    return value === 0 ? 0 : value
+  }
   pitch(): Pitch {
     const token = this.token; this.i++
     let note = notes[token.text]
@@ -24,14 +32,11 @@ class Parser {
   set(): SetNode {
     const pos = this.token.pos; let command = this.text; this.i++
     if (command === '@') { command += this.text; this.i++; if (command === '@l') { command += this.text; this.i++ } }
-    const ranges: Record<string, [number, number]> = { t: [1,255], o: [1,8], l: [1,128], v: [0,15], '@v': [0,127], q: [1,8], p: [0,8], '@d': [-16,16], '@s': [0,131], '@lv': [0,Number.MAX_SAFE_INTEGER], '@lt': [0,Number.MAX_SAFE_INTEGER], '@e': [0,Number.MAX_SAFE_INTEGER], '>': [0,Number.MAX_SAFE_INTEGER], '<': [0,Number.MAX_SAFE_INTEGER] }
+    const ranges: Record<string, [number, number]> = { t: [1,255], o: [1,8], l: [1,128], v: [0,15], '@v': [0,127], q: [1,8], p: [0,8], '@d': [-15,15], '@s': [0,131], '@lv': [0,Number.MAX_SAFE_INTEGER], '@lt': [0,Number.MAX_SAFE_INTEGER], '@e': [0,Number.MAX_SAFE_INTEGER], '>': [0,Number.MAX_SAFE_INTEGER], '<': [0,Number.MAX_SAFE_INTEGER] }
     if (!(command in ranges)) throw new MmlError(`未知のコマンド「${command}」`, pos)
-    if (['@s','@e','@lv','@lt'].includes(command)) this.take(',')
-    let sign = 1
-    if (command === '@d' && (this.text === '+' || this.text === '-')) { sign = this.text === '-' ? -1 : 1; this.i++ }
     const [min,max] = ranges[command]
     if (command === '@s' && (!/^\d+$/.test(this.text) || !(Number(this.text) <= 31 || (Number(this.text) >= 101 && Number(this.text) <= 131)))) this.error('invalid @s value: 0～31 または101～131で指定してください')
-    const value = command === '@d' ? sign * this.number(0,16) : this.number(min,max,command === '>' || command === '<' ? 1 : undefined)
+    const value = command === '@d' ? this.signedNumber(max) : this.number(min,max,command === '>' || command === '<' ? 1 : undefined)
     return { kind: 'set', command: command as Command, value, pos }
   }
   body(end: string, inLoop = false): Node[] {
@@ -85,19 +90,18 @@ class Parser {
             if (!kind) this.error('invalid LFO parameter: @lv または @ltが必要です')
             this.i++
             try {
-              this.take(',');const id=this.number(1,Number.MAX_SAFE_INTEGER)
-              if (song.lfos[kind][id]) throw new MmlError(`duplicate LFO definition: ${kind},${id}`,pos)
-              this.take('{');const depth=this.number(0,127);this.take(',');const period=this.number(1,255);this.take(',');const delay=this.number(0,255);this.take(',')
-              const direction=this.token.text;if (direction !== '+' && direction !== '-') this.error('Directionは+または-です');this.i++;this.take(',')
-              const mode=this.token.text;if (mode !== 'r' && mode !== 'h') this.error('Modeはrまたはhです');this.i++;this.take('}')
-              song.lfos[kind][id]={depth,period,delay,direction,mode} as Lfo
+              const id=this.number(1,Number.MAX_SAFE_INTEGER)
+              if (song.lfos[kind][id]) throw new MmlError(`duplicate LFO definition: ${kind}${id}`,pos)
+              this.take('{');const depth=this.signedNumber(127);this.take(',');const period=this.number(1,255);this.take(',');const delay=this.number(0,255);this.take(',')
+              const mode=this.number(0,1) as 0 | 1;this.take('}')
+              song.lfos[kind][id]={depth,period,delay,mode}
             } catch (error) {
               if (error instanceof MmlError && !error.message.startsWith('duplicate LFO')) throw new MmlError(`invalid LFO parameter: ${error.message}`,error.position)
               throw error
             }
             continue
           }
-          this.take('e'); this.take(','); const id = this.number(1,Number.MAX_SAFE_INTEGER)
+          this.take('e'); const id = this.number(1,Number.MAX_SAFE_INTEGER)
           if (song.envelopes[id]) throw new MmlError(`エンベロープ${id}が重複しています`,pos)
           this.take('{'); const values = [31,31,31,15,15,3].map((max,i)=> { if (i) this.take(','); return this.number(0,max) }); this.take('}')
           song.envelopes[id] = values as Envelope
