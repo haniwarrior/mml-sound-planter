@@ -1,4 +1,5 @@
-export interface Position { offset: number; line: number; column: number }
+export type SourceId = 'main' | 'test'
+export interface Position { source?: SourceId; end?: number; offset: number; line: number; column: number }
 export class MmlError extends Error {
   position: Position
   constructor(message: string, position: Position) { super(message); this.name = 'MmlError'; this.position = position }

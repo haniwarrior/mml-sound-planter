@@ -1,4 +1,8 @@
 import './style.css'
+import './ui/editor.css'
+import { EditorAssist } from './ui/editor.ts'
+import { installCommandHelp } from './ui/help.ts'
+import { createLineLimitDialog, exceedsLineLimit } from './ui/line-limit.ts'
 import workletUrl from './audio/worklet.ts?worker&url'
 import { compile } from './mml/compile.ts'
 import { SoundEngine } from './audio/engine.ts'
@@ -32,12 +36,17 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 const source=document.querySelector<HTMLTextAreaElement>('#source')!
 const test=document.querySelector<HTMLTextAreaElement>('#test')!
 source.value=demo
+const showLineLimit=createLineLimitDialog()
+const editors={main:new EditorAssist(source,showLineLimit),test:new EditorAssist(test,showLineLimit)}
+installCommandHelp()
 const status=document.querySelector<HTMLDivElement>('#status')!
 const statusText=document.querySelector<HTMLSpanElement>('#status-text')!
 export function showStatus(text: string, error=false) { statusText.textContent=text; status.classList.toggle('error',error) }
 let stop = () => {}; let generation=0
 async function play(isTest: boolean) {
   const ticket=++generation; stop()
+  if(exceedsLineLimit(source.value,isTest ? test.value : undefined)) {showLineLimit();return}
+  editors.main.clearError();editors.test.clearError()
   try {
     const song=compile(source.value,isTest ? test.value : undefined)
     showStatus('音源を準備しています…')
@@ -49,6 +58,7 @@ async function play(isTest: boolean) {
   } catch (error) {
     if (ticket !== generation) return
     stop()
+    if(error instanceof MmlError) editors[error.position.source ?? (isTest ? 'test' : 'main')].highlight(error.position)
     showStatus(error instanceof MmlError ? `${error.position.line}行 ${error.position.column}列：${error.message}` : error instanceof Error ? error.message : String(error),true)
   }
 }
@@ -57,6 +67,6 @@ document.querySelector('#test-play')!.addEventListener('click',()=>void play(tru
 document.querySelector('#stop')!.addEventListener('click',()=>{generation++;stop();showStatus('停止しました。')})
 const file=document.querySelector<HTMLInputElement>('#file')!
 document.querySelector('#load')!.addEventListener('click',()=>file.click())
-file.addEventListener('change',async()=>{const selected=file.files?.[0]; if (!selected) return; try { source.value=await selected.text(); showStatus(`${selected.name}を読み込みました。`) } catch { showStatus('ファイルを読み込めませんでした。',true) } file.value='' })
+file.addEventListener('change',async()=>{const selected=file.files?.[0]; if (!selected) return; try { source.value=await selected.text(); editors.main.clearError();editors.test.clearError();editors.main.refresh(true); showStatus(`${selected.name}を読み込みました。`) } catch { showStatus('ファイルを読み込めませんでした。',true) } file.value='' })
 document.querySelector('#save')!.addEventListener('click',()=>{const url=URL.createObjectURL(new Blob([source.value],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='sound-planter.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);showStatus('メインMMLを保存しました。')})
 window.addEventListener('pagehide',()=>{generation++;stop()})

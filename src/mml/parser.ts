@@ -1,9 +1,9 @@
-import { MmlError, type FmTone, type FmOperator, type Command, type Envelope, type Node, type Pitch, type SetNode, type Song } from './ast.ts'
+import { MmlError, type SourceId, type FmTone, type FmOperator, type Command, type Envelope, type Node, type Pitch, type SetNode, type Song } from './ast.ts'
 import { lex, type Token } from './lexer.ts'
 const notes: Record<string, number> = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 }
 class Parser {
   tokens: Token[]; i = 0; depth = 0
-  constructor(source: string) { this.tokens = lex(source) }
+  constructor(source: string, sourceId: SourceId = 'main') { this.tokens = lex(source,sourceId) }
   get token() { return this.tokens[this.i] }
   get text(): string { return this.token.text }
   error(message: string): never { throw new MmlError(message, this.token.pos) }
@@ -139,4 +139,4 @@ class Parser {
   }
 }
 export const parseSong = (source: string): Song => new Parser(source).song()
-export const parseTest = (source: string): Node[] => new Parser(source).body('')
+export const parseTest = (source: string): Node[] => new Parser(source,'test').body('')
