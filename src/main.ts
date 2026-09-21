@@ -21,11 +21,11 @@ track2 {
     [c g]3 c2 r2
 }`
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-<header class="masthead"><a class="brand" href="./"><span class="mark">m</span><span>MML <b>sound planter</b></span></a><span class="version">VERSION 0.1 <span class="dot"></span> SSG</span></header>
+<header class="masthead"><a class="brand" href="./"><span class="mark">m</span><span>MML <b>sound planter</b></span></a></header>
 <main><section class="intro"><div class="eyebrow">WRITE A LITTLE. PLAY A LITTLE.</div><h1>文字から、音が芽吹く。</h1><p>思いついたメロディを、MMLで。小さな音の実験を楽しもう。</p></section>
 <section class="workspace" aria-label="MMLサウンドエディタ"><div class="editor-heading"><div><span class="index">01</span><label for="source">メインMML</label><span class="sub">YOUR COMPOSITION</span></div><div class="files"><button id="load">↥ 読み込み</button><button id="save">↧ 保存</button></div></div>
 <div class="source-wrap"><textarea id="source" spellcheck="false" autocomplete="off" autocapitalize="off" aria-describedby="source-hint"></textarea></div>
-<div class="transport"><div class="transport-buttons"><button class="primary" id="play">▶ <span>再生</span></button><button id="stop">■ <span>停止</span></button></div><span id="source-hint">プレーンテキスト / 最大11トラック</span></div></section>
+<div class="transport"><div class="transport-buttons"><button class="primary" id="play">▶ <span>再生</span></button><button id="stop">■ <span>停止</span></button></div><span id="source-hint">プレーンテキスト / 最大12トラック</span></div></section>
 <section class="test-workspace"><div class="editor-heading"><div><span class="index">02</span><label for="test">テストMML</label><span class="sub">A SPACE TO EXPERIMENT</span></div><button id="test-play">▷ テスト再生</button></div><textarea id="test" rows="3" spellcheck="false" autocomplete="off" autocapitalize="off">@s0 @e1 o5 l8 c e g >c</textarea><div class="test-hint">短いフレーズを気軽に試奏。track0の定義を使えます。<span>保存には含まれません</span></div></section>
 <div id="status" role="status" aria-live="polite"><span class="status-led"></span><span id="status-text">準備完了。再生してみましょう。</span></div>
 <footer><span>気軽にMMLで楽しむ。</span><span>TEXT IN. SOUND OUT.</span></footer></main><input id="file" type="file" accept="text/plain,.txt,.mml" hidden>`

@@ -1,5 +1,5 @@
 // Rate/KS and increment table adapted from Aaron Giles' ymfm (BSD-3-Clause).
-// Sources and full license: THIRD_PARTY_NOTICES.md. No FM synthesis is included.
+// Sources and full license: THIRD_PARTY_NOTICES.md.
 export const OPM_CLOCK_HZ = 3_579_545
 export const EG_TICK_HZ = OPM_CLOCK_HZ / 64 / 3
 export const DETUNE_CENTS_PER_UNIT = 1

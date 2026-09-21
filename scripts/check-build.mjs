@@ -14,3 +14,12 @@ assert.ok(output[0][0].some(n=>n!==0))
 processor.port.onmessage({data:'stop'})
 assert.equal(processor.process([],output),false)
 console.log('Built AudioWorklet: registers, renders audio, stops successfully.')
+
+const fmValues=[7,3,...Array.from({length:4},()=>[31,12,4,8,10,24,2,1,0,0]).flat()]
+const fmSource=`track0 {@f0 {${fmValues.join(',')}} @lv1 {8,20,4,0} @lt1 {-20,32,0,0}} `+
+  Array.from({length:12},(_,i)=>`track${i+1} {@f0 @lv1 @lt1 (ce)4.&(ed)4. @s105 c}`).join(' ')
+const fmProcessor=new Processor({processorOptions:{song:compile(fmSource)}})
+assert.equal(fmProcessor.process([],output),true)
+assert.ok(output[0][0].some(n=>n!==0));assert.ok(output[0][0].every(Number.isFinite))
+fmProcessor.port.onmessage({data:'stop'});assert.equal(fmProcessor.process([],output),false)
+console.log('Built AudioWorklet: 12 FM tracks with pitch/amplitude modulation render successfully.')

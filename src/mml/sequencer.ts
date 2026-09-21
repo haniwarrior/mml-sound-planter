@@ -1,6 +1,6 @@
 import { MmlError, type Macros, type Command, type Node, type Position } from './ast.ts'
-export interface MmlState { tempo: number; octave: number; length: number; volume: number; gate: number; pan: number; detune: number; mode: number; envelope: number; vibrato: number; tremolo: number }
-export const initialState = (): MmlState => ({tempo:128,octave:4,length:4,volume:96,gate:8,pan:4,detune:0,mode:0,envelope:0,vibrato:0,tremolo:0})
+export interface MmlState { synth: 'ssg' | 'fm'; fmTone: number; tempo: number; octave: number; length: number; volume: number; gate: number; pan: number; detune: number; mode: number; envelope: number; vibrato: number; tremolo: number }
+export const initialState = (): MmlState => ({synth:'ssg',fmTone:0,tempo:128,octave:4,length:4,volume:96,gate:8,pan:4,detune:0,mode:0,envelope:0,vibrato:0,tremolo:0})
 export interface TimedEvent {
   time: number; duration: number; gate: number; pitch: number | null; endPitch: number | null
   connected: boolean; continues: boolean; state: MmlState; pos: Position
@@ -27,7 +27,8 @@ export function apply(state: MmlState, command: Command, value: number) {
     case '@v': state.volume=value; break; case 'q': state.gate=value; break
     case 'p': state.pan=value; break; case '@d': state.detune=value; break
     case '@lv': state.vibrato=value; break; case '@lt': state.tremolo=value; break
-    case '@s': state.mode=value; break; case '@e': state.envelope=value; break
+    case '@f': state.synth='fm';state.fmTone=value;break
+    case '@s': state.synth='ssg';state.mode=value; break; case '@e': state.envelope=value; break
   }
 }
 // One-event lookahead resolves & across structural commands without text expansion.

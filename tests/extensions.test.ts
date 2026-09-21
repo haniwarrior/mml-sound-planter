@@ -21,7 +21,7 @@ test('macros are case insensitive, nested, forward referenced and preserve all s
  const definitions=`$seq_A+2$ {$Arp+$ $bass-1$} $arp+$ {>l8 v10 q3 p2 @d-4 @s105 @e1 @lv1 @lt1} $bass-1$ {@v100 cd} @e1 {31,0,0,15,0,0} ${defs}`
  const e=events('o4 $SEQ_a+2$ e',definitions)
  assert.deepEqual(e.map(x=>x.pitch),[72,74,76]);assert.deepEqual(e[0].state,e[2].state)
- assert.deepEqual(e[2].state,{tempo:128,octave:5,length:8,volume:100,gate:3,pan:2,detune:-4,mode:105,envelope:1,vibrato:1,tremolo:1})
+ assert.deepEqual(e[2].state,{synth:'ssg',fmTone:0,tempo:128,octave:5,length:8,volume:100,gate:3,pan:2,detune:-4,mode:105,envelope:1,vibrato:1,tremolo:1})
 })
 test('ties across macro entry, exit, trailing tie, empty macro and loops',()=>{
  const a=events('q2 c4&$phrase$&f4','$phrase$ {d4&e4}')
@@ -69,7 +69,7 @@ test('SSG ranges distinguish combined mode and invalid gap',()=>{
  for(const n of [-1,32,99,100,132,999]) assert.throws(()=>song(`@s${n} c`),/invalid @s value/)
 })
 test('sine repeat, direction, delay, hold and depth mapping',()=>{
- const d={depth:127,period:4,delay:2,mode:0 as const}
+ const d={depth:127,period:16,delay:8,mode:0 as const}
  near(lfoValue(d,.1),0);near(lfoValue(d,.2),0);near(vibratoOffset(d,.3),12);near(vibratoOffset(d,.5),-12);near(lfoValue(d,.6),0)
  near(lfoValue({...d,depth:-127},.3),-1);near(vibratoOffset({...d,depth:0},.3),0)
  near(lfoValue({...d,mode:1},.4),Math.SQRT1_2);near(lfoValue({...d,mode:1},.6),1);near(lfoValue({...d,mode:1},5),1)
@@ -93,7 +93,7 @@ test('combined mode gates tone with fixed noise period across pitch and vibrato 
  const noise=new NoiseGenerator(),tone=new ToneGenerator()
  for(let i=0;i<actual.length;i++) {
   const time=i/sr,pitch=time<.5 ? 60+4*time/.5 : 67
-  const frequency=440*2**((pitch+12*Math.sin(time*2*Math.PI/.1)-69)/12)
+  const frequency=440*2**((pitch+12*Math.sin(time*2*Math.PI/.025)-69)/12)
   const t=tone.sample(frequency,sr),n=noise.sample(5,sr)
   near(actual[i],(n>0 ? t : -1)*.075)
  }
@@ -104,16 +104,16 @@ test('portamento, detune, vibrato, tremolo and envelope combine sample by sample
  const combined=render('@s0 @v60 p0 @e1 @d8 @lv1 @lt1 t120 (cg)1',definition)
  const tone=new ToneGenerator()
  for(let i=0;i<combined.length;i++) {
-  const time=i/sr,v=time<.2 ? 0 : 12*8/127*Math.sin((time-.2)*2*Math.PI/.5)
+  const time=i/sr,v=time<.05 ? 0 : 12*8/127*Math.sin((time-.05)*2*Math.PI/.125)
   const sample=tone.sample(440*2**((60+7*time/2+.08+v-69)/12),sr)
-  near(combined[i],sample*60/127*(1-20/127*Math.sin(time*2*Math.PI/.8))*.075)
+  near(combined[i],sample*60/127*(1-20/127*Math.sin(time*2*Math.PI/.2))*.075)
  }
  assert.notDeepEqual(base,combined)
  const faded=render('@s105 @e2 @lt1 t120 q1 c1','@e2 {31,0,0,15,0,0} @lt1 {127,1,0,0}')
  assert.ok(faded.slice(18000).every(x=>x===0))
 })
 test('LFO resets on key-on, continues over ties, and delay restarts on selection change',()=>{
- const d='@lt1 {-127,8,0,1} @lt2 {-127,8,2,1}'
+ const d='@lt1 {-127,32,0,1} @lt2 {-127,32,8,1}'
  const tied=render('@s5 t120 @lt1 c4&c4',d,48000)
  const fresh=render('@s5 t120 @lt1 c4 c4',d,48000)
  assert.ok(tied.slice(40000).every(x=>Math.abs(x)<1e-10))
@@ -139,10 +139,10 @@ test('signed LFO depths, numeric modes and optional plus survive parser through 
   near(lfoValue(data.lfos[kind][6],10),0)
   for(const depth of [-127,127,small,-small]) {
    const lfo=song('',`${kind}1 {${depth},4,0,0}`).lfos[kind][1]
-   near(lfoValue(lfo,.1),depth/127);near(lfoValue(lfo,.3),-depth/127)
+   near(lfoValue(lfo,.025),depth/127);near(lfoValue(lfo,.075),-depth/127)
    near(lfoValue({...lfo,mode:1},10),depth/127)
-   if(kind==='@lv') {near(vibratoOffset(lfo,.1),depth/127*12);near(vibratoOffset({...lfo,mode:1},10),depth/127*12)}
-   else {near(tremoloGain(lfo,.1),1+depth/127);near(tremoloGain({...lfo,mode:1},10),1+depth/127)}
+   if(kind==='@lv') {near(vibratoOffset(lfo,.025),depth/127*12);near(vibratoOffset({...lfo,mode:1},10),depth/127*12)}
+   else {near(tremoloGain(lfo,.025),1+depth/127);near(tremoloGain({...lfo,mode:1},10),1+depth/127)}
   }
   assert.deepEqual(render(`${kind}4c1`,definitions),render(`${kind}5c1`,definitions))
   for(const depth of ['+128','-128','++1','+-1','1.5']) assert.throws(()=>song('',`${kind}1 {${depth},1,0,0}`),/invalid LFO parameter/)

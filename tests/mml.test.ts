@@ -19,7 +19,7 @@ test('notes, accidental boundaries, arbitrary lengths, rests and multiple dots',
 })
 test('all default and persistent MML states',()=>{
  const state=events('c')[0].state
- assert.deepEqual(state,{tempo:128,octave:4,length:4,volume:96,gate:8,pan:4,detune:0,mode:0,envelope:0,vibrato:0,tremolo:0})
+ assert.deepEqual(state,{synth:'ssg',fmTone:0,tempo:128,octave:4,length:4,volume:96,gate:8,pan:4,detune:0,mode:0,envelope:0,vibrato:0,tremolo:0})
  const e=events('t120 o2 >3 <2 l6 v15 @v127 q3 p8 @d-15 c d')[1]
  assert.equal(e.pitch,50);assert.equal(e.state.volume,127);assert.equal(e.state.detune,-15);assert.equal(e.state.pan,8);close(e.duration,1/3);close(e.gate,1/8)
  assert.equal(events('@v127 v15 c')[0].state.volume,120)
@@ -61,8 +61,8 @@ test('portamento octave persists, durations/q and chained portamentos',()=>{
  close(events('l3 (cd)')[0].duration,240/128/3)
 })
 test('all tracks share origin; tempo changes are track-local',()=>{
- const s=compile('track0 {} track1 {@s0 t120 c t60 d} track11 {@s0 t60 c d}')
- const a=new Sequencer(s.tracks[1]),b=new Sequencer(s.tracks[11]);assert.equal(a.next()!.time,b.next()!.time);close(a.next()!.time,.5);close(b.next()!.time,1)
+ const s=compile('track0 {} track1 {@s0 t120 c t60 d} track12 {@s0 t60 c d}')
+ const a=new Sequencer(s.tracks[1]),b=new Sequencer(s.tracks[12]);assert.equal(a.next()!.time,b.next()!.time);close(a.next()!.time,.5);close(b.next()!.time,1)
 })
 test('test playback uses definitions and only the test track; independent defaults',()=>{
  const main='track0 {@e1 {31,0,0,15,0,2}} track1 {@s0 o8 v1 c}'
@@ -77,7 +77,7 @@ const invalid=[
 ]
 for(const mml of invalid) test(`reject ${mml}`,()=>assert.throws(()=>song(mml),MmlError))
 for(const source of [
- 'track1 {@s0 c}','track0 {} track0 {}','track0 {} track1 {} track1 {}','track0 {} track12 {}',
+ 'track1 {@s0 c}','track0 {} track0 {}','track0 {} track1 {} track1 {}','track0 {} track13 {}',
  'track0 {@e0 {31,0,0,15,0,0}}','track0 {@e1 {31,0,0,15,0,0} @e1 {31,0,0,15,0,0}}',
  'track0 {@e1 {31,0,0,15,0}}','track0 {@e1 {31,0,0,15,0,0,1}}','track0 {@e1 {32,0,0,15,0,0}}',
  'track0 {@e1 {31,32,0,15,0,0}}','track0 {@e1 {31,0,32,15,0,0}}','track0 {@e1 {31,0,0,16,0,0}}',

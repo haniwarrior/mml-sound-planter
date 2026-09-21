@@ -1,4 +1,4 @@
-import { MmlError, type Command, type Envelope, type Node, type Pitch, type SetNode, type Song } from './ast.ts'
+import { MmlError, type FmTone, type FmOperator, type Command, type Envelope, type Node, type Pitch, type SetNode, type Song } from './ast.ts'
 import { lex, type Token } from './lexer.ts'
 const notes: Record<string, number> = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 }
 class Parser {
@@ -13,6 +13,10 @@ class Parser {
     const token = this.tokens[this.i++], n = Number(token.text)
     if (!Number.isSafeInteger(n) || n < min || n > max) throw new MmlError(`値は${min}～${max}で指定してください`, token.pos)
     return n
+  }
+  fmNumber(): number {
+    try { return this.number(0,127) }
+    catch(error) { if(error instanceof MmlError) throw new MmlError(`invalid FM tone number: ${error.message}`,error.position);throw error }
   }
   signedNumber(max: number): number {
     const pos=this.token.pos
@@ -32,11 +36,11 @@ class Parser {
   set(): SetNode {
     const pos = this.token.pos; let command = this.text; this.i++
     if (command === '@') { command += this.text; this.i++; if (command === '@l') { command += this.text; this.i++ } }
-    const ranges: Record<string, [number, number]> = { t: [1,255], o: [1,8], l: [1,128], v: [0,15], '@v': [0,127], q: [1,8], p: [0,8], '@d': [-15,15], '@s': [0,131], '@lv': [0,Number.MAX_SAFE_INTEGER], '@lt': [0,Number.MAX_SAFE_INTEGER], '@e': [0,Number.MAX_SAFE_INTEGER], '>': [0,Number.MAX_SAFE_INTEGER], '<': [0,Number.MAX_SAFE_INTEGER] }
+    const ranges: Record<string, [number, number]> = { t: [1,255], o: [1,8], l: [1,128], v: [0,15], '@v': [0,127], q: [1,8], p: [0,8], '@d': [-15,15], '@f': [0,127], '@s': [0,131], '@lv': [0,Number.MAX_SAFE_INTEGER], '@lt': [0,Number.MAX_SAFE_INTEGER], '@e': [0,Number.MAX_SAFE_INTEGER], '>': [0,Number.MAX_SAFE_INTEGER], '<': [0,Number.MAX_SAFE_INTEGER] }
     if (!(command in ranges)) throw new MmlError(`未知のコマンド「${command}」`, pos)
     const [min,max] = ranges[command]
     if (command === '@s' && (!/^\d+$/.test(this.text) || !(Number(this.text) <= 31 || (Number(this.text) >= 101 && Number(this.text) <= 131)))) this.error('invalid @s value: 0～31 または101～131で指定してください')
-    const value = command === '@d' ? this.signedNumber(max) : this.number(min,max,command === '>' || command === '<' ? 1 : undefined)
+    const value = command === '@f' ? this.fmNumber() : command === '@d' ? this.signedNumber(max) : this.number(min,max,command === '>' || command === '<' ? 1 : undefined)
     return { kind: 'set', command: command as Command, value, pos }
   }
   body(end: string, inLoop = false): Node[] {
@@ -71,9 +75,11 @@ class Parser {
     this.depth--; return body
   }
   song(): Song {
-    const song: Song = { tracks: {}, envelopes: {}, macros: Object.create(null), lfos: {'@lv':{},'@lt':{}} }; const seen = new Set<number>()
+    const song: Song = { fmTones: {}, tracks: {}, envelopes: {}, macros: Object.create(null), lfos: {'@lv':{},'@lt':{}} }; const seen = new Set<number>()
     while (this.text) {
-      this.take('track'); const pos = this.token.pos, track = this.number(0,11)
+      this.take('track'); const pos = this.token.pos
+      let track:number
+      try { track=this.number(0,12) } catch(error) { if(error instanceof MmlError) throw new MmlError(`invalid track number: ${error.message}`,error.position);throw error }
       if (seen.has(track)) throw new MmlError(`track${track}が重複しています`,pos)
       seen.add(track); this.take('{')
       if (track === 0) {
@@ -85,6 +91,25 @@ class Parser {
             this.take('{');const body=this.body('}');this.take('}');song.macros[name]={body,pos};continue
           }
           this.take('@')
+          if (this.text === 'f') {
+            this.i++;const id=this.fmNumber()
+            if(song.fmTones[id]) throw new MmlError(`duplicate FM tone definition: @f${id}`,pos)
+            this.take('{')
+            const maxima=[7,7,...Array.from({length:4},()=>[31,31,31,15,15,127,3,15,7,3]).flat()]
+            const values:number[]=[]
+            for(const max of maxima) {
+              if(this.token.text === '}' || !this.text) this.error('wrong FM parameter count: 42値が必要です')
+              if(values.length) {this.take(',');if(this.token.text === '}' || !this.text) this.error('wrong FM parameter count: 42値が必要です')}
+              try {values.push(this.number(0,max))} catch(error) {if(error instanceof MmlError) throw new MmlError(`FM parameter out of range: ${error.message}`,error.position);throw error}
+            }
+            if(this.token.text !== '}') this.error('wrong FM parameter count: 42値が必要です')
+            this.take('}')
+            const operators=Array.from({length:4},(_,i):FmOperator=>{
+              const [ar,dr,sr,rr,sl,tl,ks,ml,dt1,dt2]=values.slice(2+i*10,12+i*10)
+              return {ar,dr,sr,rr,sl,tl,ks,ml,dt1,dt2}
+            }) as FmTone['operators']
+            song.fmTones[id]={algorithm:values[0],feedback:values[1],operators};continue
+          }
           if (this.text === 'l') {
             this.i++;const kind=this.token.text === 'v' ? '@lv' : this.token.text === 't' ? '@lt' : undefined
             if (!kind) this.error('invalid LFO parameter: @lv または @ltが必要です')

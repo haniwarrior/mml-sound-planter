@@ -1,7 +1,8 @@
 # ymfm
 
 `src/audio/opm-rates.ts` and the envelope state algorithm in
-`src/audio/envelope.ts` adapt the rate table and EG behavior in:
+`src/audio/envelope.ts`, plus the algorithm topology, DT1 table, DT2 values
+and feedback scaling in `src/audio/fm.ts`, adapt the corresponding behavior in:
 
 - https://github.com/aaronsgiles/ymfm/blob/main/src/ymfm_fm.ipp
 - https://github.com/aaronsgiles/ymfm/blob/main/src/ymfm_opm.cpp
