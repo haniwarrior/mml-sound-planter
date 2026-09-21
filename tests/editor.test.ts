@@ -104,3 +104,31 @@ test('decoration metrics use integer line heights and panels remain non-modal an
  assert.ok(source.indexOf('if(exceedsLineLimit(')<source.indexOf('const song=compile('))
  assert.match(source,/new Blob\(\[source.value\]/)
 })
+
+test('loop Enter indentation combines unresolved braces and brackets and ignores comments',()=>{
+ assert.equal(enter('  [cdef'),'  [cdef\n    ')
+ assert.equal(enter('  [cdef]2'),'  [cdef]2\n  ')
+ assert.equal(enter('  [[cdef'),'  [[cdef\n      ')
+ assert.equal(enter('  [[cd]2ef'),'  [[cd]2ef\n    ')
+ assert.equal(enter('track1 { [cdef'),'track1 { [cdef\n    ')
+ assert.equal(enter('track1 { [cd]2'),'track1 { [cd]2\n  ')
+ assert.equal(enter('  [cd // ]'),'  [cd // ]\n    ')
+ assert.equal(enter('  // ['),'  // [\n  ')
+ assert.equal(enter('track1 {\n  [cdef\n    gab>c'),'track1 {\n  [cdef\n    gab>c\n    ')
+})
+test('closing loops dedent one level with nested and mixed delimiters',()=>{
+ const close=(value:string,key:']'|'}')=>{
+  const edit=indentEdit(value,value.length,value.length,key)!
+  return value.slice(0,edit.start)+edit.text
+ }
+ assert.equal(close('track1 {\n  [cdef\n    gab>c\n    ',']'),'track1 {\n  [cdef\n    gab>c\n  ]')
+ assert.equal(close('track1 {\n  [cd\n    [ef\n      ',']'),'track1 {\n  [cd\n    [ef\n    ]')
+ assert.equal(close('track1 {\n  [cd\n    ef\n  ]2\n  ','}'),'track1 {\n  [cd\n    ef\n  ]2\n}')
+ assert.equal(close('track1 {\n  [cd]2\n  ','}'),'track1 {\n  [cd]2\n}')
+ for(const value of ['  cdef','  // [\n  ','  ','track1 {\n  [cd\n  '])
+  assert.equal(indentEdit(value,value.length,value.length,']'),undefined)
+ assert.equal(indentEdit('[cd\n  ',5,6,']'),undefined)
+ assert.equal(guideDepth('    [cd'),2)
+ assert.equal(guideDepth('  ]2'),1)
+ assert.equal(guideDepth('    '),0)
+})

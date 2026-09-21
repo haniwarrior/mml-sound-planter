@@ -32,7 +32,7 @@ export class EditorAssist {
     textarea.addEventListener('beforeinput',(event)=>{
       const input=event as InputEvent
       if(this.editing || this.composing || input.isComposing || !input.cancelable) return
-      const key=input.inputType==='insertLineBreak' || input.inputType==='insertParagraph' ? 'Enter' : input.inputType==='insertText' && input.data==='}' ? '}' : undefined
+      const key=input.inputType==='insertLineBreak' || input.inputType==='insertParagraph' ? 'Enter' : input.inputType==='insertText' && (input.data==='}' || input.data===']') ? input.data : undefined
       if(!key) return
       const edit=indentEdit(textarea.value,textarea.selectionStart,textarea.selectionEnd,key)
       if(edit) {input.preventDefault();this.insert(edit)}

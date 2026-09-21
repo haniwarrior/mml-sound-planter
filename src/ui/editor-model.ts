@@ -11,14 +11,14 @@ export function indentation(text:string):number {
 }
 export const guideDepth=(line:string)=>line.trim() ? Math.floor(indentation(line)/2) : 0
 export interface TextEdit { start:number; end:number; text:string }
-// Comments never affect brace nesting. Pasted text never enters this function.
-export function indentEdit(value:string,start:number,end:number,key:'Enter'|'}'):TextEdit|undefined {
+// Comments never affect brace or loop nesting. Pasted text never enters this function.
+export function indentEdit(value:string,start:number,end:number,key:'Enter'|'}'|']'):TextEdit|undefined {
   const lineStart=start>0 ? value.lastIndexOf('\n',start-1)+1 : 0
   const before=value.slice(lineStart,start)
   if(key==='Enter') {
     const code=before.split('//')[0]
     let balance=0
-    for(const c of code) {if(c==='{') balance++;if(c==='}') balance--}
+    for(const c of code) {if(c==='{' || c==='[') balance++;if(c==='}' || c===']') balance--}
     return {start,end,text:'\n'+' '.repeat(indentation(before)+Math.max(0,balance)*2)}
   }
   if(start!==end || !/^[ \t]+$/.test(before)) return
@@ -26,14 +26,14 @@ export function indentEdit(value:string,start:number,end:number,key:'Enter'|'}')
   for(const line of value.slice(0,lineStart).split('\n')) {
     let local=0
     for(const c of line.split('//')[0]) {
-      if(c==='{') {stack.push(indentation(line)+local*2);local++}
-      if(c==='}') {stack.pop();local=Math.max(0,local-1)}
+      if(c==='{' || c==='[') {stack.push(indentation(line)+local*2);local++}
+      if(c==='}' || c===']') {stack.pop();local=Math.max(0,local-1)}
     }
   }
   const target=stack.at(-1)
   const width=indentation(before)
   if(target===undefined || width<=target) return
-  return {start:lineStart,end,text:' '.repeat(Math.max(target,width-2))+'}'}
+  return {start:lineStart,end,text:' '.repeat(Math.max(target,width-2))+key}
 }
 export interface ErrorRange { line:number; start:number; end:number; wholeLine:boolean }
 export function errorRange(value:string,pos:Position):ErrorRange {
