@@ -9,6 +9,7 @@ export class AudioRenderer {
     this.sampleRate=sampleRate
     this.tracks=Object.values(song.tracks).map(nodes=>{const sequencer=new Sequencer(nodes,song.macros);return {sequencer,next:sequencer.next(),voice:new TrackVoice(sampleRate,song.envelopes,song.lfos,song.fmTones,song.waveTones),end:0}})
   }
+  forceStop() {this.tracks=[];this.frame=0}
   render(left:Float32Array,right:Float32Array) {
     left.fill(0);right.fill(0)
     for(let i=0;i<left.length;i++,this.frame++) {

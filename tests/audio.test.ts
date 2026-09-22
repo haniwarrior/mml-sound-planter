@@ -65,6 +65,7 @@ test('render blocks do not alter common clock or oscillator/envelope phase',()=>
 })
 class FakeContext {
  static instances:FakeContext[]=[];static load:Promise<void>=Promise.resolve()
+ state='running';currentTime=0
  audioWorklet={addModule:()=>FakeContext.load};destination={};closed=0;resumed=0
  constructor(){FakeContext.instances.push(this)}
  resume(){this.resumed++;return Promise.resolve()}
@@ -72,21 +73,22 @@ class FakeContext {
 }
 class FakeNode {
  static instances:FakeNode[]=[];disconnected=0;connected=0
- port={onmessage:null as null|((event:{data:{type:string}})=>void),postMessage:(_data:unknown)=>{},close:()=>{}}
+ port={onmessage:null as null|((event:{data:{type:string}})=>void),postMessage:(data:unknown)=>{if(data==='stop') this.port.onmessage?.({data:{type:'stopped'}})},close:()=>{}}
  onprocessorerror:unknown
  constructor(){FakeNode.instances.push(this)}
  connect(){this.connected++}disconnect(){this.disconnected++}
 }
-test('engine stop cancels pending worklet loading and releases every context/node',async()=>{
+test('engine stop cancels pending worklet loading, releases nodes and reuses one output context',async()=>{
  const originals={context:globalThis.AudioContext,node:globalThis.AudioWorkletNode}
  Object.assign(globalThis,{AudioContext:FakeContext,AudioWorkletNode:FakeNode})
  try {
    let release!:()=>void;FakeContext.load=new Promise<void>(resolve=>{release=resolve})
    const cancelled=new SoundEngine('test');const pending=cancelled.play(compile('track0 {}'),()=>{});cancelled.stop();release();await pending
-   assert.equal(FakeNode.instances.length,0);assert.equal(FakeContext.instances[0].closed,1)
+   assert.equal(FakeNode.instances.length,0);assert.equal(FakeContext.instances[0].closed,0)
    FakeContext.load=Promise.resolve()
    for(let i=0;i<20;i++){const e=new SoundEngine('test');await e.play(compile('track0 {}'),()=>{});e.stop();e.stop()}
-   assert.ok(FakeContext.instances.every(c=>c.closed===1));assert.ok(FakeNode.instances.every(n=>n.disconnected===1))
+   assert.equal(FakeContext.instances.length,1);assert.equal(FakeContext.instances[0].closed,0);assert.ok(FakeNode.instances.every(n=>n.disconnected===1))
    let done=false;const e=new SoundEngine('test');await e.play(compile('track0 {}'),()=>{done=true});FakeNode.instances.at(-1)!.port.onmessage!({data:{type:'ended'}});assert.equal(done,true)
- } finally {Object.assign(globalThis,{AudioContext:originals.context,AudioWorkletNode:originals.node})}
+   await SoundEngine.shutdown();assert.equal(FakeContext.instances[0].closed,1)
+ } finally {await SoundEngine.shutdown();Object.assign(globalThis,{AudioContext:originals.context,AudioWorkletNode:originals.node})}
 })

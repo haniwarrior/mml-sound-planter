@@ -59,7 +59,7 @@ Source → Lexer/Parser → AST → Validation → Sequencer → Timed Events �
 SequencerはWeb Audio APIを参照せず、音源もMML文字列を読みません。
 1イベント先読みで`&`を解決し、ループはAST上に保持します。
 複数トラックは共通のサンプル位置0から開始します。メインスレッドのタイマーによる発音予約はありません。
-停止時はWorklet出力を切断し、MessagePortを閉じ、AudioContextを閉じます。
+停止時はWorklet出力を切断し、音源状態の破棄完了応答後にMessagePortを閉じます。AudioContextはMain/Testで共有し、ページ離脱時に閉じます。
 再生準備中の停止・再生連打も世代番号と音源のキャンセル状態で処理します。
 
 ## 実装したMML
@@ -219,3 +219,21 @@ track1 {
 ```
 
 全12トラックで使用でき、`@s` / `@f` / `@w` は同一トラック内で切り替え可能です。32サンプルを補間せず周期的に読み出し、key-onでサンプル0へ戻します。タイ／レガート中の波形番号変更は次のkey-onまで反映せず、位相も維持します。共通のエンベロープ、Vibrato、Tremolo、Detune、音量、Pan、Gate、Portamentoを利用します。`tests/wave.test.ts` で定義・検証・段階波形・位相・音源切り替え・各演奏機能・12トラック・コマンド詳細を検証しています。
+
+## 再生開始の同期
+
+Main / Test は同じ SoundEngine を使います。ユーザー操作内でresumeを要求し、resumeとWorklet読み込み完了・running状態を確認してノードを接続します。Workletの準備完了通知後に取得したcurrentTimeの50ms先を全トラック共通の開始時刻にします。待機中は無音で、シーケンサ・音源の時間を進めません。開始指示が遅れた場合も先頭をスキップせず、note-onとnote-offをまとめて後へずらします。
+
+演奏開始時だけ、ミックス済みステレオ出力に2msの線形de-click rampを適用します。各音源の位相、FM/software envelope、LFO、q、タイの計算は変更しません。Stopは従来どおり即時切断であり、停止境界そのものへのフェードは追加していません。
+
+旧実装もresume完了を待ち、note-on/offを共通のサンプル時計で計算していました。過去のnote-onだけが遅延する計算不具合は見つかっていません。一方、Workletは明示的な開始待機なしで直ちにレンダリングを開始していたため、接続・出力開始との同期余裕がありませんでした。また、非ゼロの先頭波形による出力不連続は確認できます。これらを修正していますが、端末固有の初動欠けやドライバーの不連続については実機試聴が必要です。
+
+### Stopの完了と再生の切り替え
+
+Main/Testで1つのAudioContextを共有します。通常のStopではclose/suspendせず、音声出力経路を無音で維持します。曲ごとのWorklet・voice・シーケンサは再利用しません。Stopは即座にノードを切断し、Workletへ停止を通知します。WorkletがforceStopで全トラック（release状態・次イベントを含む）を破棄し、`stopped`応答を返してからポートを閉じ、StopのPromiseを完了します。次の再生はこの完了を待って新しいWorkletを接続します。Stopを繰り返しても同じPromiseを返します。
+
+通常演奏のkey-off/release、50msのpre-roll、2msの開始時de-clickは従来のままです。固定の再生待ち時間や停止フェードは追加していません。初回およびOS側でContextが中断された場合のみ、Play操作内でresumeを要求します。WorkletモジュールはContextごとに読み込みを共有し、ページ離脱時にContextも終了します。停止中も音声デバイスのContextを保持する点は意図した変更です。
+
+この設計にはOscillatorNode・AudioBufferSourceNode・GainNode・Gain automation・音声用タイマー・音声用requestAnimationFrameはありません。DSPとイベントはWorkletのrenderer内に集約されています。UI装飾用requestAnimationFrameは再生とは独立です。
+
+Safari/macOS + Bluetoothで、Stop後に約1.5秒空けると前回音の混入が消えるとの報告を受け、再生ごとの出力経路の再作成を廃止しました。以前のclose待機は新しいWorklet接続だけに適用され、新しいAudioContext作成/resumeとは並行していました。デバイス側の残留バッファが原因という見立ては、現時点では実測未確認です。自動テストでは連続Main/Test切り替え時のContext数1、Stop時close/resumeなし、破棄応答待機、繰り返しStop、全音源の状態破棄を検証しています。

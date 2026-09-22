@@ -42,7 +42,7 @@ installCommandHelp()
 const status=document.querySelector<HTMLDivElement>('#status')!
 const statusText=document.querySelector<HTMLSpanElement>('#status-text')!
 export function showStatus(text: string, error=false) { statusText.textContent=text; status.classList.toggle('error',error) }
-let stop = () => {}; let generation=0
+let stop = () => Promise.resolve(); let generation=0
 async function play(isTest: boolean) {
   const ticket=++generation; stop()
   if(exceedsLineLimit(source.value,isTest ? test.value : undefined)) {showLineLimit();return}
@@ -64,9 +64,13 @@ async function play(isTest: boolean) {
 }
 document.querySelector('#play')!.addEventListener('click',()=>void play(false))
 document.querySelector('#test-play')!.addEventListener('click',()=>void play(true))
-document.querySelector('#stop')!.addEventListener('click',()=>{generation++;stop();showStatus('停止しました。')})
+document.querySelector('#stop')!.addEventListener('click',()=>{
+  const ticket=++generation
+  showStatus('停止しています…')
+  void stop().then(()=>{if(ticket===generation) showStatus('停止しました。')},()=>{if(ticket===generation) showStatus('音声の終了処理に失敗しました。ページを再読み込みしてください。',true)})
+})
 const file=document.querySelector<HTMLInputElement>('#file')!
 document.querySelector('#load')!.addEventListener('click',()=>file.click())
 file.addEventListener('change',async()=>{const selected=file.files?.[0]; if (!selected) return; try { source.value=await selected.text(); editors.main.clearError();editors.test.clearError();editors.main.refresh(true); showStatus(`${selected.name}を読み込みました。`) } catch { showStatus('ファイルを読み込めませんでした。',true) } file.value='' })
 document.querySelector('#save')!.addEventListener('click',()=>{const url=URL.createObjectURL(new Blob([source.value],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='sound-planter.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);showStatus('メインMMLを保存しました。')})
-window.addEventListener('pagehide',()=>{generation++;stop()})
+window.addEventListener('pagehide',()=>{generation++;void SoundEngine.shutdown().catch(()=>{})})
