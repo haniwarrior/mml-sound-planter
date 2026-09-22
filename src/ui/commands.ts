@@ -1,5 +1,19 @@
 export interface CommandHelp { id:string; section:'definition'|'performance'; symbol:string; label:string; detail:string }
 export const commands:CommandHelp[] = [
+{
+  "id": "wave-performance",
+  "section": "performance",
+  "symbol": "@w",
+  "label": "波形メモリ音色",
+  "detail": "書式\n@wN\n\n設定範囲\n0〜127\n\n説明\ntrack0で定義した波形メモリ音色を選択します。\n\n未定義の音色番号を使用するとエラーになります。\n\n例\n@w1"
+},
+{
+  "id": "wave-definition",
+  "section": "definition",
+  "symbol": "@w",
+  "label": "波形メモリ音色定義",
+  "detail": "書式\n@wN {\n  32個のサンプル値\n}\n\n定義場所\ntrack0\n\n音色番号\n0〜127\n\nサンプル数\n32\n\nサンプル値\n-128〜+127\n\n正数の + は省略可能です。\n\n例\n@w1 {\n  0,24,+48,72,96,112,120,127,\n  120,112,96,72,48,24,0,-24,\n  -48,-72,-96,-112,-120,-128,-120,-112,\n  -96,-72,-48,-24,0,8,+4,0\n}\n\n説明\n32サンプルの波形データを使用する波形メモリ音色を定義します。"
+},
   {
     "id": "5-1",
     "section": "performance",

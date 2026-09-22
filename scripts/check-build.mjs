@@ -23,3 +23,14 @@ assert.equal(fmProcessor.process([],output),true)
 assert.ok(output[0][0].some(n=>n!==0));assert.ok(output[0][0].every(Number.isFinite))
 fmProcessor.port.onmessage({data:'stop'});assert.equal(fmProcessor.process([],output),false)
 console.log('Built AudioWorklet: 12 FM tracks with pitch/amplitude modulation render successfully.')
+
+const waveSamples=Array.from({length:32},(_,i)=>i*8-128)
+const waveSource=`track0 {@w0 {${waveSamples}} @lv1 {8,20,4,0} @lt1 {-20,32,0,0}} `+
+  Array.from({length:12},(_,i)=>`track${i+1} {@w0 @lv1 @lt1 (ce)4.&(ed)4.}`).join(' ')
+const waveProcessor=new Processor({processorOptions:{song:compile(waveSource)}})
+assert.equal(waveProcessor.process([],output),true)
+assert.ok(output[0][0].some(n=>n!==0));assert.ok(output[0][0].every(Number.isFinite))
+let waveActive=true
+for(let block=0;block<1000 && waveActive;block++) waveActive=waveProcessor.process([],output)
+assert.equal(waveActive,false)
+console.log('Built AudioWorklet: 12 wave tracks render with modulation and finish with key-off.')

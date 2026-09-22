@@ -79,12 +79,12 @@ test('indent guides follow two spaces and never appear on whitespace-only lines'
  assert.equal(guideDepth('\tc'),2);assert.equal(guideDepth('track0 {'),0)
 })
 test('command catalog has all sections, exact order and no notes/rests',()=>{
- assert.equal(commands.length,29)
- assert.deepEqual(orderedCommands('definition').map(c=>c.symbol),['@e','@f','@lt','@lv','$name$'])
+ assert.equal(commands.length,31)
+ assert.deepEqual(orderedCommands('definition').map(c=>c.symbol),['@e','@f','@lt','@lv','@w','$name$'])
  const performance=orderedCommands('performance').map(c=>c.symbol)
- assert.deepEqual(performance,['@d','@e','@f','@lt','@lv','@s','@v','l','o','p','q','t','v','$name$','&','()','+','-','.','//','<','>','[]',':'])
+ assert.deepEqual(performance,['@d','@e','@f','@lt','@lv','@s','@v','@w','l','o','p','q','t','v','$name$','&','()','+','-','.','//','<','>','[]',':'])
  assert.ok(commands.every(c=>!['c','d','e','f','g','a','b','r'].includes(c.symbol)))
- assert.equal(new Set(commands.map(c=>c.id)).size,29)
+ assert.equal(new Set(commands.map(c=>c.id)).size,31)
  assert.ok(commands.every(c=>c.detail.includes('書式')))
  const detail=(symbol:string,section='performance')=>commands.find(c=>c.symbol===symbol && c.section===section)!.detail
  assert.match(detail('@lv','definition'),/0\.025秒/);assert.match(detail('@lv','definition'),/±1オクターブ/)

@@ -19,7 +19,7 @@ test('notes, accidental boundaries, arbitrary lengths, rests and multiple dots',
 })
 test('all default and persistent MML states',()=>{
  const state=events('c')[0].state
- assert.deepEqual(state,{synth:'ssg',fmTone:0,tempo:128,octave:4,length:4,volume:96,gate:8,pan:4,detune:0,mode:0,envelope:0,vibrato:0,tremolo:0})
+ assert.deepEqual(state,{synth:'ssg',waveTone:0,fmTone:0,tempo:128,octave:4,length:4,volume:96,gate:8,pan:4,detune:0,mode:0,envelope:0,vibrato:0,tremolo:0})
  const e=events('t120 o2 >3 <2 l6 v15 @v127 q3 p8 @d-15 c d')[1]
  assert.equal(e.pitch,50);assert.equal(e.state.volume,127);assert.equal(e.state.detune,-15);assert.equal(e.state.pan,8);close(e.duration,1/3);close(e.gate,1/8)
  assert.equal(events('@v127 v15 c')[0].state.volume,120)

@@ -21,7 +21,7 @@ test('macros are case insensitive, nested, forward referenced and preserve all s
  const definitions=`$seq_A+2$ {$Arp+$ $bass-1$} $arp+$ {>l8 v10 q3 p2 @d-4 @s105 @e1 @lv1 @lt1} $bass-1$ {@v100 cd} @e1 {31,0,0,15,0,0} ${defs}`
  const e=events('o4 $SEQ_a+2$ e',definitions)
  assert.deepEqual(e.map(x=>x.pitch),[72,74,76]);assert.deepEqual(e[0].state,e[2].state)
- assert.deepEqual(e[2].state,{synth:'ssg',fmTone:0,tempo:128,octave:5,length:8,volume:100,gate:3,pan:2,detune:-4,mode:105,envelope:1,vibrato:1,tremolo:1})
+ assert.deepEqual(e[2].state,{synth:'ssg',waveTone:0,fmTone:0,tempo:128,octave:5,length:8,volume:100,gate:3,pan:2,detune:-4,mode:105,envelope:1,vibrato:1,tremolo:1})
 })
 test('ties across macro entry, exit, trailing tie, empty macro and loops',()=>{
  const a=events('q2 c4&$phrase$&f4','$phrase$ {d4&e4}')
