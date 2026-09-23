@@ -1,5 +1,5 @@
 import type { Position } from '../mml/ast.ts'
-import { errorRange, guideDepth, indentEdit, lineNumber, MAX_LINES, visibleLines, type ErrorRange, type TextEdit } from './editor-model.ts'
+import { errorRange, guideDepth, inputEdit, lineNumber, MAX_LINES, visibleLines, type ErrorRange, type TextEdit } from './editor-model.ts'
 
 export class EditorAssist {
   private textarea:HTMLTextAreaElement
@@ -32,9 +32,7 @@ export class EditorAssist {
     textarea.addEventListener('beforeinput',(event)=>{
       const input=event as InputEvent
       if(this.editing || this.composing || input.isComposing || !input.cancelable) return
-      const key=input.inputType==='insertLineBreak' || input.inputType==='insertParagraph' ? 'Enter' : input.inputType==='insertText' && (input.data==='}' || input.data===']') ? input.data : undefined
-      if(!key) return
-      const edit=indentEdit(textarea.value,textarea.selectionStart,textarea.selectionEnd,key)
+      const edit=inputEdit(textarea.value,textarea.selectionStart,textarea.selectionEnd,input.inputType,input.data)
       if(edit) {input.preventDefault();this.insert(edit)}
     })
     new ResizeObserver(()=>this.schedule()).observe(textarea)
@@ -43,6 +41,7 @@ export class EditorAssist {
   }
   private insert(edit:TextEdit) {
     const textarea=this.textarea
+    if(edit.text==='' && edit.start===edit.end && edit.caret!==undefined) {textarea.setSelectionRange(edit.caret,edit.caret);return}
     this.editing=true
     textarea.setSelectionRange(edit.start,edit.end)
     // Native editing keeps undo/redo where supported; fallback preserves selection and input events.
@@ -53,6 +52,7 @@ export class EditorAssist {
         textarea.setRangeText(edit.text,edit.start,edit.end,'end')
         textarea.dispatchEvent(new Event('input',{bubbles:true}))
       }
+      if(edit.caret!==undefined) textarea.setSelectionRange(edit.caret,edit.caret)
     } finally {this.editing=false}
   }
   refresh(checkLimit=false) {
