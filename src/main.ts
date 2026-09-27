@@ -1,3 +1,4 @@
+import { createSaveDialog } from './ui/save-dialog.ts'
 import './style.css'
 import './ui/editor.css'
 import { EditorAssist } from './ui/editor.ts'
@@ -69,8 +70,10 @@ document.querySelector('#stop')!.addEventListener('click',()=>{
   showStatus('停止しています…')
   void stop().then(()=>{if(ticket===generation) showStatus('停止しました。')},()=>{if(ticket===generation) showStatus('音声の終了処理に失敗しました。ページを再読み込みしてください。',true)})
 })
+let currentFileName='sound-planter.txt'
 const file=document.querySelector<HTMLInputElement>('#file')!
 document.querySelector('#load')!.addEventListener('click',()=>file.click())
-file.addEventListener('change',async()=>{const selected=file.files?.[0]; if (!selected) return; try { source.value=await selected.text(); editors.main.clearError();editors.test.clearError();editors.main.refresh(true); showStatus(`${selected.name}を読み込みました。`) } catch { showStatus('ファイルを読み込めませんでした。',true) } file.value='' })
-document.querySelector('#save')!.addEventListener('click',()=>{const url=URL.createObjectURL(new Blob([source.value],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='sound-planter.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);showStatus('メインMMLを保存しました。')})
+file.addEventListener('change',async()=>{const selected=file.files?.[0]; if (!selected) return; try { source.value=await selected.text(); currentFileName=selected.name; editors.main.clearError();editors.test.clearError();editors.main.refresh(true); showStatus(`${selected.name}を読み込みました。`) } catch { showStatus('ファイルを読み込めませんでした。',true) } file.value='' })
+const showSaveDialog=createSaveDialog(name=>{const url=URL.createObjectURL(new Blob([source.value],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=name;try {a.click();currentFileName=name} finally {setTimeout(()=>URL.revokeObjectURL(url),1000)};showStatus('メインMMLを保存しました。')})
+document.querySelector('#save')!.addEventListener('click',()=>showSaveDialog(currentFileName))
 window.addEventListener('pagehide',()=>{generation++;void SoundEngine.shutdown().catch(()=>{})})
